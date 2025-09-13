@@ -1,18 +1,13 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
 
-// Create express instance
-const expressApp = express();
-
-// For Vercel
+// For Vercel serverless function
 let app: any;
 
 async function createNestApp() {
   if (!app) {
-    app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+    app = await NestFactory.create(AppModule);
     
     // Enable validation globally
     app.useGlobalPipes(new ValidationPipe());
@@ -22,13 +17,14 @@ async function createNestApp() {
     
     await app.init();
   }
-  return expressApp;
+  return app;
 }
 
 // Export for Vercel
 export default async (req: any, res: any) => {
-  const server = await createNestApp();
-  return server(req, res);
+  const nestApp = await createNestApp();
+  const httpServer = nestApp.getHttpServer();
+  return httpServer(req, res);
 };
 
 // For local development
