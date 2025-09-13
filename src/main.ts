@@ -2,45 +2,47 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import { ExpressAdapter } from '@nestjs/platform-express';
-import * as express from 'express';
+import express from 'express';
 
-const server = express();
-
-async function createApp() {
-  const app = await NestFactory.create(AppModule, new ExpressAdapter(server));
-  
-  // Enable validation globally
-  app.useGlobalPipes(new ValidationPipe());
-  
-  // Enable CORS if needed
-  app.enableCors();
-  
-  await app.init();
-  return app;
-}
+// Create express instance
+const expressApp = express();
 
 // For Vercel
-let cachedApp: any;
+let app: any;
 
-export default async (req: any, res: any) => {
-  if (!cachedApp) {
-    cachedApp = await createApp();
+async function createNestApp() {
+  if (!app) {
+    app = await NestFactory.create(AppModule, new ExpressAdapter(expressApp));
+    
+    // Enable validation globally
+    app.useGlobalPipes(new ValidationPipe());
+    
+    // Enable CORS if needed
+    app.enableCors();
+    
+    await app.init();
   }
+  return expressApp;
+}
+
+// Export for Vercel
+export default async (req: any, res: any) => {
+  const server = await createNestApp();
   return server(req, res);
 };
 
 // For local development
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const nestApp = await NestFactory.create(AppModule);
   
   // Enable validation globally
-  app.useGlobalPipes(new ValidationPipe());
+  nestApp.useGlobalPipes(new ValidationPipe());
   
   // Enable CORS if needed
-  app.enableCors();
+  nestApp.enableCors();
   
   const port = process.env.PORT || 3000;
-  await app.listen(port);
+  await nestApp.listen(port);
   console.log(`API is running on http://localhost:${port}`);
 }
 
